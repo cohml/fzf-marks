@@ -107,7 +107,6 @@ function fzm {
         --bind=ctrl-y:accept,ctrl-t:toggle+down \
         --header='"ctrl-y:jump, ctrl-t:toggle, $delete_key:delete, $paste_key:paste"' \
         --query='"$*"' \
-        --select-1 \
         --tac)
     if [[ -z "$lines" ]]; then
         zle && zle redraw-prompt
