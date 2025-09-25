@@ -100,7 +100,7 @@ function _fzm_paste_command {
 
 function fzm {
     local delete_key=${FZF_MARKS_DELETE:-ctrl-d} paste_key=${FZF_MARKS_PASTE:-ctrl-v}
-    local lines=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | eval ${FZF_MARKS_COMMAND} \
+    local lines=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | column -ts " " | sed "s|${HOME}|~|" | eval ${FZF_MARKS_COMMAND} \
         --ansi \
         --expect='"$delete_key,$paste_key"' \
         --multi \
