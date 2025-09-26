@@ -88,7 +88,7 @@ function _fzm_color_marks {
         c_lhs=${FZF_MARKS_COLOR_LHS:-39}
         c_rhs=${FZF_MARKS_COLOR_RHS:-36}
         c_colon=${FZF_MARKS_COLOR_COLON:-33}
-        sed "s/^\\(.*\\) : \\(.*\\)$/${esc}[${c_lhs}m\\1${esc}[0m ${esc}[${c_colon}m:${esc}[0m ${esc}[${c_rhs}m\\2${esc}[0m/"
+        sed "s/^\\(.*\\) ┃ \\(.*\\)$/${esc}[${c_lhs}m\\1${esc}[0m ${esc}[${c_colon}m┃${esc}[0m ${esc}[${c_rhs}m\\2${esc}[0m/"
     fi
 }
 
@@ -113,7 +113,7 @@ function _fzm_align_marks {
         if [[ "$path" == "$HOME"* ]]; then
             path="~${path#$HOME}"
         fi
-        printf "%-*s : %s\n" "$max_width" "$mark" "$path"
+        printf "%-*s ┃ %s\n" "$max_width" "$mark" "$path"
     done < "${FZF_MARKS_FILE}"
 }
 
@@ -159,7 +159,7 @@ function jump {
     fi
     if [[ -n ${jumpline} ]]; then
         # Strip ANSI codes and parse the clean line
-        jumpdir=$(sed 's/\x1b\[[0-9;]*m//g' <<< $jumpline | sed 's/.*: \(.*\)$/\1/')
+        jumpdir=$(sed 's/\x1b\[[0-9;]*m//g' <<< $jumpline | sed 's/.*┃ \(.*\)$/\1/')
         # Expand ~ to HOME
         if [[ "$jumpdir" == "~"* ]]; then
             jumpdir="${HOME}${jumpdir#\~}"
@@ -186,7 +186,7 @@ function pmark {
     fi
     if [[ $selected ]]; then
         # Strip ANSI codes and parse the clean line
-        selected=$(sed 's/\x1b\[[0-9;]*m//g' <<< "$selected" | sed 's/.*: \(.*\)$/\1/')
+        selected=$(sed 's/\x1b\[[0-9;]*m//g' <<< "$selected" | sed 's/.*┃ \(.*\)$/\1/')
         # Expand ~ to HOME
         if [[ "$selected" == "~"* ]]; then
             selected="${HOME}${selected#\~}"
