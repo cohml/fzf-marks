@@ -157,8 +157,11 @@ function jump {
         bookmarks=$(_fzm_handle_symlinks)
         cd "${jumpdir}" || return
         if [[ ! "${FZF_MARKS_KEEP_ORDER}" == 1 && -w ${FZF_MARKS_FILE} ]]; then
-            perl -n -i -e "print unless /^\\Q${jumpline//\//\\/}\\E\$/" "${bookmarks}"
-            printf '%s\n' "${jumpline}" >> "${FZF_MARKS_FILE}"
+            # Extract mark name from the formatted line and reconstruct original format
+            local markname=$(sed 's/\x1b\[[0-9;]*m//g' <<< $jumpline | sed 's/^\([^┃]*\) *┃.*$/\1/' | sed 's/[[:space:]]*$//')
+            local original_line="${markname} : ${jumpdir}"
+            perl -n -i -e "print unless /^\\Q${markname//\//\\/} : /" "${bookmarks}"
+            printf '%s\n' "${original_line}" >> "${FZF_MARKS_FILE}"
         fi
     fi
 }
