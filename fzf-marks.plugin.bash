@@ -89,9 +89,28 @@ function _fzm_color_marks {
     fi
 }
 
+function _fzm_align_marks {
+    local max_width=0 mark path width
+
+    # First pass: find the maximum mark name width
+    while IFS=' : ' read -r mark path; do
+        width=${#mark}
+        ((width > max_width)) && max_width=$width
+    done < "${FZF_MARKS_FILE}"
+
+    # Second pass: pad mark names, replace HOME, and output
+    while IFS=' : ' read -r mark path; do
+        # Replace HOME with ~ using parameter expansion
+        if [[ "$path" == "$HOME"* ]]; then
+            path="~${path#$HOME}"
+        fi
+        printf "%-*s : %s\n" "$max_width" "$mark" "$path"
+    done < "${FZF_MARKS_FILE}"
+}
+
 function fzm {
     local delete_key=${FZF_MARKS_DELETE:-ctrl-d} paste_key=${FZF_MARKS_PASTE:-ctrl-v}
-    local lines=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | eval ${FZF_MARKS_COMMAND} \
+    local lines=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
         --ansi \
         --expect='"$delete_key,$paste_key"' \
         --multi \
@@ -120,7 +139,7 @@ function jump {
     if [[ $1 == "-->-->-->" ]]; then
         jumpline=$2
     else
-        jumpline=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | eval ${FZF_MARKS_COMMAND} \
+        jumpline=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
             --ansi \
             --bind=ctrl-y:accept \
             --header='"ctrl-y:jump"' \
@@ -129,7 +148,12 @@ function jump {
             --tac)
     fi
     if [[ -n ${jumpline} ]]; then
-        jumpdir=$(sed 's/.*: \(.*\)$/\1/;'"s#^~#${HOME}#" <<< $jumpline)
+        # Strip ANSI codes and parse the clean line
+        jumpdir=$(sed 's/\x1b\[[0-9;]*m//g' <<< $jumpline | sed 's/.*: \(.*\)$/\1/')
+        # Expand ~ to HOME
+        if [[ "$jumpdir" == "~"* ]]; then
+            jumpdir="${HOME}${jumpdir#\~}"
+        fi
         bookmarks=$(_fzm_handle_symlinks)
         cd "${jumpdir}" || return
         if [[ ! "${FZF_MARKS_KEEP_ORDER}" == 1 && -w ${FZF_MARKS_FILE} ]]; then
@@ -144,13 +168,18 @@ function pmark {
     if [[ $1 == "-->-->-->" ]]; then
         selected=$2
     else
-        selected=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | eval ${FZF_MARKS_COMMAND} \
+        selected=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
             --ansi \
             --bind=ctrl-y:accept --header='"ctrl-y:paste"' \
             --query='"$*"' --select-1 --tac)
     fi
     if [[ $selected ]]; then
-        selected=$(sed 's/.*: \(.*\)$/\1/;'"s#^~#${HOME}#" <<< $selected)
+        # Strip ANSI codes and parse the clean line
+        selected=$(sed 's/\x1b\[[0-9;]*m//g' <<< $selected | sed 's/.*: \(.*\)$/\1/')
+        # Expand ~ to HOME
+        if [[ "$selected" == "~"* ]]; then
+            selected="${HOME}${selected#\~}"
+        fi
         local paste_command=${FZF_MARKS_PASTE_COMMAND:-"printf '%s\n'"}
         eval -- "$paste_command \"\$selected\""
     fi
@@ -161,7 +190,7 @@ function dmark {
     if [[ $1 == "-->-->-->" ]]; then
         marks_to_delete=$2
     else
-        marks_to_delete=$(_fzm_color_marks < "${FZF_MARKS_FILE}" | eval ${FZF_MARKS_COMMAND} \
+        marks_to_delete=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
             -m --ansi \
             --bind=ctrl-y:accept,ctrl-t:toggle+down --header='"ctrl-y:delete, ctrl-t:toggle"' \
             --query='"$*"' --tac)
