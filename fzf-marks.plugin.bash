@@ -58,7 +58,9 @@ function mark {
         printf '%s\n' "${mark_to_add}" >> "${FZF_MARKS_FILE}"
         echo "** The following mark has been added **"
     fi
-    _fzm_color_marks <<< $mark_to_add
+    # Convert to display format and colorize
+    local display_mark=${mark_to_add/ : / ┃ }
+    _fzm_color_marks <<< "$display_mark"
     _fzm_setup_completion
 }
 
@@ -201,14 +203,22 @@ function dmark {
     bookmarks=$(_fzm_handle_symlinks)
 
     if [[ -n ${marks_to_delete} ]]; then
+        # Convert formatted lines back to original format for deletion
         while IFS='' read -r line; do
-            perl -n -i -e "print unless /^\\Q${line//\//\\/}\\E\$/" "${bookmarks}"
+            # Extract mark name and path from formatted line
+            local clean_line=$(sed 's/\x1b\[[0-9;]*m//g' <<< "$line")
+            local markname=$(sed 's/^\([^┃]*\) *┃.*$/\1/' <<< "$clean_line" | sed 's/[[:space:]]*$//')
+            local markpath=$(sed 's/.*┃ \(.*\)$/\1/' <<< "$clean_line")
+
+            # Delete using original format
+            perl -n -i -e "print unless /^\\Q${markname} : /" "${bookmarks}"
         done <<< "$marks_to_delete"
 
+        # Display confirmation message and colored marks
         [[ $(wc -l <<< "${marks_to_delete}") == 1 ]] \
             && echo "** The following mark has been deleted **" \
             || echo "** The following marks have been deleted **"
-        _fzm_color_marks <<< $marks_to_delete
+        _fzm_color_marks <<< "$marks_to_delete"
     fi
     _fzm_setup_completion
 }
