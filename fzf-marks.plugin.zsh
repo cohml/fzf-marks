@@ -42,6 +42,14 @@ if [[ -z ${FZF_MARKS_COMMAND-} ]] ; then
     fi
 fi
 
+if [[ -z ${FZF_MARKS_PREVIEW_KEY-} ]] ; then
+    FZF_MARKS_PREVIEW_KEY="ctrl-p"
+fi
+
+if [[ -z ${FZF_MARKS_PREVIEW_ACTION-} ]] ; then
+    FZF_MARKS_PREVIEW_ACTION="/bin/ls -1a | /usr/bin/grep -Eve '^\.+$'"
+fi
+
 function mark {
     local mark_to_add
     mark_to_add="${*:-$(basename "$(pwd)")} : $(pwd)"
@@ -123,10 +131,14 @@ function fzm {
     local delete_key=${FZF_MARKS_DELETE:-ctrl-d} paste_key=${FZF_MARKS_PASTE:-ctrl-v}
     local lines=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
         --ansi \
+        --delimiter='"\s+┃\s+"' \
         --expect='"$delete_key,$paste_key"' \
         --multi \
         --bind=ctrl-y:accept,ctrl-t:toggle+down \
-        --header='"ctrl-y:jump, ctrl-t:toggle, $delete_key:delete, $paste_key:paste"' \
+        --bind='"${FZF_MARKS_PREVIEW_KEY}:toggle-preview"' \
+        --header='"ctrl-y:jump, ctrl-t:toggle, ${delete_key}:delete, ${paste_key}:paste, ${FZF_MARKS_PREVIEW_KEY}:preview"' \
+        --preview='"path=\$(echo {2} | sed \"s/\\x1b\\[[0-9;]*m//g\" | sed \"s|^~|${HOME}|\"); cd \"\${path}\" 2>/dev/null && ${FZF_MARKS_PREVIEW_ACTION}"' \
+        --preview-window='right:50%:hidden' \
         --query='"$*"' \
         --tac)
     if [[ -z "$lines" ]]; then
@@ -153,8 +165,12 @@ function jump {
     else
         jumpline=$(_fzm_align_marks | _fzm_color_marks | eval ${FZF_MARKS_COMMAND} \
             --ansi \
+            --delimiter='"\s+┃\s+"' \
             --bind=ctrl-y:accept \
-            --header='"ctrl-y:jump"' \
+            --bind='"${FZF_MARKS_PREVIEW_KEY}:toggle-preview"' \
+            --header='"ctrl-y:jump, ${FZF_MARKS_PREVIEW_KEY}:preview"' \
+            --preview='"path=\$(echo {2} | sed \"s/\\x1b\\[[0-9;]*m//g\" | sed \"s|^~|${HOME}|\"); cd \"\${path}\" 2>/dev/null && ${FZF_MARKS_PREVIEW_ACTION}"' \
+            --preview-window='right:50%:hidden' \
             --query='"$*"' \
             --select-1 \
             --tac)
